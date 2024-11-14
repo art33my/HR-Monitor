@@ -1,0 +1,35 @@
+version: "3.8"
+
+services:
+  db:
+    image: postgres:13
+    container_name: hr_monitor_db
+    environment:
+      POSTGRES_USER: hr_monitor_user
+      POSTGRES_PASSWORD: hr_monitor_password
+      POSTGRES_DB: hr_monitor_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - hr-monitor-network
+
+  app:
+    build: .
+    container_name: hr-monitor-app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgresql://hr_monitor_user:hr_monitor_password@db:5432/hr_monitor_db
+    networks:
+      - hr-monitor-network
+
+volumes:
+  postgres_data:
+
+networks:
+  hr-monitor-network:
+    driver: bridge
