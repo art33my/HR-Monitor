@@ -1,14 +1,17 @@
 # crud.py
 from sqlalchemy.orm import Session
+from passlib.hash import bcrypt
 from models import User, Vacancy, Resume, Stage, ResumeStage, SLA
 
 # Функции для работы с пользователями
 def create_user(db: Session, username: str, password: str, role: str):
-    db_user = User(username=username, password=password, role=role)
+    hashed_password = bcrypt.hash(password)  # Хешируем пароль
+    db_user = User(username=username, password=hashed_password, role=role)
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
     return db_user
+
 
 def get_users(db: Session, skip: int = 0, limit: int = 100):
     return db.query(User).offset(skip).limit(limit).all()
@@ -20,6 +23,7 @@ def create_vacancy(db: Session, title: str, description: str):
     db.commit()
     db.refresh(db_vacancy)
     return db_vacancy
+
 
 def get_vacancies(db: Session, skip: int = 0, limit: int = 100):
     return db.query(Vacancy).offset(skip).limit(limit).all()

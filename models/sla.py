@@ -1,7 +1,7 @@
 # models/sla.py
 from sqlalchemy import Column, Integer, ForeignKey, Float
 from sqlalchemy.orm import relationship
-from database import Base
+from db.database import Base
 
 class SLA(Base):
     __tablename__ = 'sla'

@@ -2,7 +2,7 @@
 from sqlalchemy import Column, Integer, String, Text
 from sqlalchemy.orm import relationship
 
-from database import Base
+from db.database import Base
 
 class Stage(Base):
     __tablename__ = 'stages'
