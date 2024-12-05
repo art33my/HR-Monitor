@@ -4,6 +4,7 @@ from sqlalchemy.orm import relationship
 from db.database import Base
 from datetime import datetime
 
+
 class Vacancy(Base):
     __tablename__ = 'vacancies'
 

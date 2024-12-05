@@ -6,6 +6,7 @@ from schemas import ResumeCreate
 
 router = APIRouter()
 
+
 @router.post("/resumes/")
 def create_resume(resume: ResumeCreate, db: Session = Depends(get_db)):
     return crud.create_resume(

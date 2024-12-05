@@ -4,6 +4,7 @@ from sqlalchemy.orm import relationship
 from db.database import Base
 from datetime import datetime
 
+
 class ResumeStage(Base):
     __tablename__ = 'resume_stages'
 
@@ -18,4 +19,3 @@ class ResumeStage(Base):
 
     def __repr__(self):
         return f"<ResumeStage(resume_id={self.resume_id}, stage_id={self.stage_id}, started_at={self.started_at})>"
-

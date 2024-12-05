@@ -1,11 +1,22 @@
-# crud.py
+# db/crud.py
+
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
-from passlib.hash import bcrypt
+import bcrypt
 from models import User, Vacancy, Resume, Stage, ResumeStage, SLA
+from schemas import VacancyUpdate, UserUpdate
+
 
 # Функции для работы с пользователями
+
+def hash_password(password: str) -> str:
+    salt = bcrypt.gensalt()  # Генерируем соль
+    hashed = bcrypt.hashpw(password.encode('utf-8'), salt)  # Хешируем пароль
+    return hashed.decode('utf-8')  # Преобразуем в строку для хранения в БД
+
+
 def create_user(db: Session, username: str, password: str, role: str):
-    hashed_password = bcrypt.hash(password)  # Хешируем пароль
+    hashed_password = hash_password(password)  # Хешируем пароль
     db_user = User(username=username, password=hashed_password, role=role)
     db.add(db_user)
     db.commit()
@@ -15,6 +26,29 @@ def create_user(db: Session, username: str, password: str, role: str):
 
 def get_users(db: Session, skip: int = 0, limit: int = 100):
     return db.query(User).offset(skip).limit(limit).all()
+
+
+def delete_user(db: Session, user_id: int):
+    db_user = db.query(User).filter(User.id == user_id).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    db.delete(db_user)
+    db.commit()
+
+
+def update_user(db: Session, user_id: int, user: UserUpdate):
+    db_user = db.query(User).filter(User.id == user_id).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail="Vacancy not found")
+
+    for key, value in user.dict(exclude_unset=True).items():
+        setattr(db_user, key, value)
+
+    db.commit()
+    db.refresh(db_user)
+    return db_user
+
 
 # Функции для работы с вакансиями
 def create_vacancy(db: Session, title: str, description: str):
@@ -27,6 +61,29 @@ def create_vacancy(db: Session, title: str, description: str):
 
 def get_vacancies(db: Session, skip: int = 0, limit: int = 100):
     return db.query(Vacancy).offset(skip).limit(limit).all()
+
+
+def update_vacancy(db: Session, vacancy_id: int, vacancy: VacancyUpdate):
+    db_vacancy = db.query(Vacancy).filter(Vacancy.id == vacancy_id).first()
+    if not db_vacancy:
+        raise HTTPException(status_code=404, detail="Vacancy not found")
+
+    for key, value in vacancy.dict(exclude_unset=True).items():
+        setattr(db_vacancy, key, value)
+
+    db.commit()
+    db.refresh(db_vacancy)
+    return db_vacancy
+
+
+def delete_vacancy(db: Session, vacancy_id: int):
+    db_vacancy = db.query(Vacancy).filter(Vacancy.id == vacancy_id).first()
+    if not db_vacancy:
+        raise HTTPException(status_code=404, detail="Vacancy not found")
+
+    db.delete(db_vacancy)
+    db.commit()
+
 
 # Функции для работы с резюме
 def create_resume(db: Session, user_id: int, vacancy_id: int, content: str, source: str, status: str):
@@ -46,6 +103,7 @@ def create_resume(db: Session, user_id: int, vacancy_id: int, content: str, sour
 def get_resumes(db: Session, skip: int = 0, limit: int = 100):
     return db.query(Resume).offset(skip).limit(limit).all()
 
+
 # Функции для работы с стадиями
 def create_stage(db: Session, name: str, description: str):
     db_stage = Stage(name=name, description=description)
@@ -54,8 +112,10 @@ def create_stage(db: Session, name: str, description: str):
     db.refresh(db_stage)
     return db_stage
 
+
 def get_stages(db: Session, skip: int = 0, limit: int = 100):
     return db.query(Stage).offset(skip).limit(limit).all()
+
 
 # Функции для работы с SLA
 def create_sla(db: Session, resume_id: int, stage_id: int, duration: float):

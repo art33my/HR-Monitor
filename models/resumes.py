@@ -21,6 +21,5 @@ class Resume(Base):
     sla = relationship("SLA", back_populates="resume")
     resume_stages = relationship("ResumeStage", back_populates="resume")
 
-
     def __repr__(self):
         return f"<Resume(user_id={self.user_id}, vacancy_id={self.vacancy_id}, status={self.status})>"

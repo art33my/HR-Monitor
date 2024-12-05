@@ -3,6 +3,7 @@ from sqlalchemy import Column, Integer, ForeignKey, Float
 from sqlalchemy.orm import relationship
 from db.database import Base
 
+
 class SLA(Base):
     __tablename__ = 'sla'
 
