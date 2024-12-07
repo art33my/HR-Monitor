@@ -51,8 +51,8 @@ def update_user(db: Session, user_id: int, user: UserUpdate):
 
 
 # Функции для работы с вакансиями
-def create_vacancy(db: Session, title: str, description: str):
-    db_vacancy = Vacancy(title=title, description=description)
+def create_vacancy(db: Session, title: str, description: str, user_id: int):
+    db_vacancy = Vacancy(title=title, description=description, user_id=user_id)
     db.add(db_vacancy)
     db.commit()
     db.refresh(db_vacancy)

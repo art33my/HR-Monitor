@@ -8,14 +8,14 @@ from schemas import VacancyCreate, VacancyOut, VacancyUpdate
 from fastapi.security import OAuth2PasswordBearer, HTTPBearer, HTTPAuthorizationCredentials
 
 router = APIRouter(
-    prefix="/vacancies",
+    prefix="/vacancy",
     tags=["vacancies"]
 )
 oauth2_scheme = HTTPBearer()
 
 
 # Получение списка вакансий
-@router.get("/", response_model=List[VacancyOut])
+@router.get("/list", response_model=List[VacancyOut])
 def read_vacancies(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
     return crud.get_vacancies(db, skip=skip, limit=limit)
 
@@ -24,10 +24,12 @@ def read_vacancies(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)
 @router.post("/create", response_model=VacancyOut)
 def create_vacancy(vacancy: VacancyCreate, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     user_info = verify_token(token.credentials)
+    user_id = user_info["id"]
     if user_info["role"] != "team_lead_hr" and user_info["role"] != "admin":
         print(f"Unauthorized role: {user_info['role']}")
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to create vacancies")
-    return crud.create_vacancy(db, title=vacancy.title, description=vacancy.description)
+
+    return crud.create_vacancy(db, title=vacancy.title, description=vacancy.description, user_id=user_id)
 
 
 # Обновление вакансии (только team_lead_hr)

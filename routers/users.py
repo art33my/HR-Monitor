@@ -9,7 +9,7 @@ from models import User
 from typing import List
 
 router = APIRouter(
-    prefix="/users",
+    prefix="/user",
     tags=["users"]
 )
 oauth2_scheme = HTTPBearer()
@@ -21,7 +21,7 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
     db_user = db.query(User).filter(User.username == user.username).first()
     if not db_user or not verify_password(user.password, db_user.password):
         raise HTTPException(status_code=400, detail="Invalid username or password")
-    access_token = create_access_token(data={"sub": db_user.username, "role": db_user.role})
+    access_token = create_access_token(data={"sub": db_user.username, "role": db_user.role, "id": db_user.id})
     return {"access_token": access_token, "token_type": "bearer"}
 
 
@@ -52,7 +52,7 @@ def create_user(new_user: UserCreate, db: Session = Depends(get_db), token: str 
 
 
 # Получение списка пользователей (только admin)
-@router.get("/")
+@router.get("/list")
 def read_users(skip: int = 0, limit: int = 10, db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
     user_info = verify_token(token.credentials)
     if user_info["role"] != "admin":

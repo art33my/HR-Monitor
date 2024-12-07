@@ -29,7 +29,7 @@ def create_access_token(data: dict, expires_delta: timedelta = None):
     expire = datetime.utcnow() + (expires_delta if expires_delta else timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
     to_encode.update({"exp": expire})
     to_encode["role"] = data.get("role")  # Добавляем роль
-
+    to_encode["id"] = data.get("id")
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     print(f"Generated token: {encoded_jwt}")  # Логирование токена
     return encoded_jwt
@@ -48,13 +48,13 @@ def verify_token(token: str):
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
         role: str = payload.get("role")
-
+        id: int = payload.get("id")
         # Логирование: если роль отсутствует
         if username is None or role is None:
             print(f"Invalid token payload: {payload}")
             raise credentials_exception
 
-        return {"username": username, "role": role}
+        return {"username": username, "role": role, "id": id}
     except JWTError as e:
         print(f"JWTError: {str(e)}")
         raise credentials_exception
