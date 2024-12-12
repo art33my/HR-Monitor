@@ -43,7 +43,7 @@ def get_current_user_info(token: HTTPAuthorizationCredentials = Depends(oauth2_s
 
 
 # Создание пользователя (только admin)
-@router.post("/create_user")
+@router.post("/create")
 def create_user(new_user: UserCreate, db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
     user_info = verify_token(token.credentials)
     if user_info["role"] != "admin":

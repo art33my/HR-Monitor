@@ -56,15 +56,44 @@ class VacancyOut(VacancyBase):
 
 
 # Модели для резюме
-class ResumeCreate(BaseModel):
+class Resume(BaseModel):
     user_id: int
+    vacancy_id: int
+    content: str
+    source: str
+    status: str
+    created_at: datetime
+
+class ResumeCreate(BaseModel):
     vacancy_id: int
     content: str
     source: str
     status: str
 
 
+class ResumeUpdate(BaseModel):
+    vacancy_id: Optional[int] = None
+    content: Optional[str] = None
+    status: Optional[str] = None
+
 # Модель для возвращаемого токена
 class Token(BaseModel):
     access_token: str
     token_type: str
+
+class MoveResumeSchema(BaseModel):
+    stage_id: int
+
+class ResumeStageSchema(BaseModel):
+    id: int
+    resume_id: int
+    stage_id: int
+    started_at: datetime
+    ended_at: datetime | None
+
+    class Config:
+        orm_mode = True
+
+class StageCreate(BaseModel):
+    name: str
+    description: str

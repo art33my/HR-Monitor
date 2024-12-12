@@ -4,7 +4,9 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 import bcrypt
 from models import User, Vacancy, Resume, Stage, ResumeStage, SLA
-from schemas import VacancyUpdate, UserUpdate
+from schemas import VacancyUpdate, UserUpdate, ResumeUpdate
+from datetime import datetime
+
 
 
 # Функции для работы с пользователями
@@ -103,6 +105,25 @@ def create_resume(db: Session, user_id: int, vacancy_id: int, content: str, sour
 def get_resumes(db: Session, skip: int = 0, limit: int = 100):
     return db.query(Resume).offset(skip).limit(limit).all()
 
+def delete_resume(db: Session, resume_id: int):
+    db_resume = db.query(Resume).filter(Resume.id == resume_id).first()
+    if not db_resume:
+        raise HTTPException(status_code=404, detail="Resume not found")
+
+    db.delete(db_resume)
+    db.commit()
+
+def update_resume(db: Session, resume_id: int, resume: ResumeUpdate):
+    db_resume = db.query(Resume).filter(Resume.id == resume_id).first()
+    if not db_resume:
+        raise HTTPException(status_code=404, detail="Resume not found")
+
+    for key, value in resume.dict(exclude_unset=True).items():
+        setattr(db_resume, key, value)
+
+    db.commit()
+    db.refresh(db_resume)
+    return db_resume
 
 # Функции для работы с стадиями
 def create_stage(db: Session, name: str, description: str):
@@ -116,6 +137,34 @@ def create_stage(db: Session, name: str, description: str):
 def get_stages(db: Session, skip: int = 0, limit: int = 100):
     return db.query(Stage).offset(skip).limit(limit).all()
 
+def move_resume_to_stage(db: Session, resume_id: int, stage_id: int):
+    current_stage = db.query(ResumeStage).filter(
+        ResumeStage.resume_id == resume_id, ResumeStage.ended_at.is_(None)
+    ).first()
+    if current_stage:
+        current_stage.ended_at = datetime.utcnow()
+        db.add(current_stage)
+        db.commit()
+
+    # Добавить новую стадию
+    new_stage = ResumeStage(
+        resume_id=resume_id,
+        stage_id=stage_id,
+        started_at=datetime.utcnow()
+    )
+    db.add(new_stage)
+
+    # Обновить статус в таблице resumes
+    resume = db.query(Resume).filter(Resume.id == resume_id).first()
+    if resume:
+        stage = db.query(Stage).filter(Stage.id == stage_id).first()
+        if stage:
+            resume.status = stage.name
+            db.add(resume)
+
+    db.commit()
+    db.refresh(new_stage)
+    return new_stage
 
 # Функции для работы с SLA
 def create_sla(db: Session, resume_id: int, stage_id: int, duration: float):
