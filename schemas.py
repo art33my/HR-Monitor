@@ -76,13 +76,10 @@ class ResumeUpdate(BaseModel):
     content: Optional[str] = None
     status: Optional[str] = None
 
-# Модель для возвращаемого токена
-class Token(BaseModel):
-    access_token: str
-    token_type: str
 
 class MoveResumeSchema(BaseModel):
     stage_id: int
+
 
 class ResumeStageSchema(BaseModel):
     id: int
@@ -94,6 +91,22 @@ class ResumeStageSchema(BaseModel):
     class Config:
         orm_mode = True
 
+
 class StageCreate(BaseModel):
     name: str
     description: str
+
+
+class SLACreate(BaseModel):
+    resume_id: int
+    stage_id: int
+    duration: float  # Время в часах
+
+    class Config:
+        orm_mode = True
+
+# Модель для возвращаемого токена
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+

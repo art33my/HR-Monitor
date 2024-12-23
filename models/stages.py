@@ -13,6 +13,7 @@ class Stage(Base):
 
     resume_stages = relationship("ResumeStage", back_populates="stage")  # связь с resume_stages
     sla = relationship("SLA", back_populates="stage")  # связь с SLA
+    violations = relationship("SLAViolation", back_populates="stage")
 
-    def __repr__(self):
+def __repr__(self):
         return f"<Stage(name={self.name}, description={self.description})>"

@@ -7,7 +7,7 @@ from sqlalchemy import pool
 from alembic import context
 
 # Добавляем директорию с моделями в sys.path
-sys.path.append(os.path.join(os.path.dirname(__file__), 'models'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'models'))
 
 # Импортируем Base из db/database.py
 from db.database import Base  # Это ваша настройка для моделей

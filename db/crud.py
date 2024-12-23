@@ -1,11 +1,12 @@
 # db/crud.py
 
 from fastapi import HTTPException
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 import bcrypt
-from models import User, Vacancy, Resume, Stage, ResumeStage, SLA
+from models import User, Vacancy, Resume, Stage, ResumeStage, SLA, SLAViolation
 from schemas import VacancyUpdate, UserUpdate, ResumeUpdate
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 
@@ -124,8 +125,8 @@ def update_resume(db: Session, resume_id: int, resume: ResumeUpdate):
     db.commit()
     db.refresh(db_resume)
     return db_resume
-
 # Функции для работы с стадиями
+
 def create_stage(db: Session, name: str, description: str):
     db_stage = Stage(name=name, description=description)
     db.add(db_stage)
@@ -137,16 +138,39 @@ def create_stage(db: Session, name: str, description: str):
 def get_stages(db: Session, skip: int = 0, limit: int = 100):
     return db.query(Stage).offset(skip).limit(limit).all()
 
+
 def move_resume_to_stage(db: Session, resume_id: int, stage_id: int):
+    # Получаем текущую стадию резюме
     current_stage = db.query(ResumeStage).filter(
         ResumeStage.resume_id == resume_id, ResumeStage.ended_at.is_(None)
     ).first()
+
     if current_stage:
         current_stage.ended_at = datetime.utcnow()
         db.add(current_stage)
         db.commit()
 
-    # Добавить новую стадию
+        # Проверка на нарушение SLA
+        sla = db.query(SLA).filter(SLA.resume_id == resume_id, SLA.stage_id == stage_id).first()
+        if sla:
+            # Вычисляем время, которое резюме провело на стадии
+            time_spent = current_stage.ended_at - current_stage.started_at
+            expected_duration = timedelta(hours=sla.duration)
+
+            # Если время превышает ожидания по SLA
+            if time_spent > expected_duration:
+                violation = SLAViolation(
+                    resume_id=resume_id,
+                    stage_id=stage_id,
+                    user_id=current_stage.resume.user_id,
+                    violation_time=datetime.utcnow(),
+                    expected_duration=int(expected_duration.total_seconds() // 3600),  # Время в часах
+                    actual_duration=int(time_spent.total_seconds() // 3600)  # Время в часах
+                )
+                db.add(violation)
+                db.commit()
+
+    # Добавляем новую стадию
     new_stage = ResumeStage(
         resume_id=resume_id,
         stage_id=stage_id,
@@ -154,7 +178,7 @@ def move_resume_to_stage(db: Session, resume_id: int, stage_id: int):
     )
     db.add(new_stage)
 
-    # Обновить статус в таблице resumes
+    # Обновляем статус в таблице resumes
     resume = db.query(Resume).filter(Resume.id == resume_id).first()
     if resume:
         stage = db.query(Stage).filter(Stage.id == stage_id).first()
@@ -173,3 +197,57 @@ def create_sla(db: Session, resume_id: int, stage_id: int, duration: float):
     db.commit()
     db.refresh(db_sla)
     return db_sla
+
+def get_sla_violations(db: Session, skip: int = 0, limit: int = 100):
+    return db.query(SLAViolation).offset(skip).limit(limit).all()
+
+# Функции для работы со статистикой
+
+def get_average_time_per_stage(db: Session, user_id: int = None):
+    query = db.query(
+        ResumeStage.stage_id,
+        func.avg(func.extract('epoch', ResumeStage.ended_at - ResumeStage.started_at)).label('average_time')
+    ).join(Resume).filter(ResumeStage.ended_at.isnot(None))
+
+    if user_id:
+        query = query.filter(Resume.user_id == user_id)
+
+    return query.group_by(ResumeStage.stage_id).all()
+
+def get_resumes_distribution_by_stage(db: Session, user_id: int = None):
+    query = db.query(
+        Resume.status,
+        func.count(Resume.id).label('count')
+    )
+    if user_id:
+        query = query.filter(Resume.user_id == user_id)
+
+    return query.group_by(Resume.status).all()
+
+def get_resumes_distribution_by_source(db: Session, user_id: int = None):
+    query = db.query(
+        Resume.source,
+        func.count(Resume.id).label('count')
+    )
+    if user_id:
+        query = query.filter(Resume.user_id == user_id)
+
+    return query.group_by(Resume.source).all()
+
+def get_average_candidates_per_vacancy(db: Session):
+    subquery = db.query(
+        Resume.vacancy_id,
+        func.count(Resume.id).label('candidate_count')
+    ).group_by(Resume.vacancy_id).subquery()
+
+    return db.query(func.avg(subquery.c.candidate_count)).scalar()
+
+def get_sla_violations_count(db: Session, user_id: int = None):
+    query = db.query(
+        SLAViolation.stage_id,
+        func.count(SLAViolation.id).label('violation_count')
+    )
+    if user_id:
+        query = query.filter(SLAViolation.user_id == user_id)
+
+    return query.group_by(SLAViolation.stage_id).all()

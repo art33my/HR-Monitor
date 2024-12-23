@@ -3,9 +3,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status, FastAPI
 from sqlalchemy.orm import Session
 from fastapi.security import OAuth2PasswordBearer, HTTPBearer, HTTPAuthorizationCredentials
-from db import crud, get_db, create_access_token, verify_password, verify_token
-from schemas import UserCreate, UserLogin, Token, UserOut, ResumeCreate, Resume, ResumeUpdate, MoveResumeSchema, ResumeStageSchema, StageCreate
+from db import crud, get_db, create_access_token, verify_password, verify_token, get_sla_violations
+from schemas import (UserCreate, UserLogin, Token, UserOut, ResumeCreate, Resume, ResumeUpdate, MoveResumeSchema,
+                     ResumeStageSchema, StageCreate, SLACreate)
 from models import Resume as ResumeModel
+from models import SLA
 from typing import List
 from typing import Optional
 from fastapi import Query
@@ -72,22 +74,10 @@ def update_vacancy(resume_id: int, resume: ResumeUpdate, db: Session = Depends(g
     return crud.update_resume(db, resume_id=resume_id, resume=resume)
 
 # Перемещение резюме
-@router.post("/{resume_id}/move", response_model=ResumeStageSchema)
+@router.post("/move/{resume_id}", response_model=ResumeStageSchema)
 def move_resume(resume_id: int, move_data: MoveResumeSchema, db: Session = Depends(get_db)):
     new_stage = crud.move_resume_to_stage(db, resume_id, move_data.stage_id)
     if not new_stage:
         raise HTTPException(status_code=404, detail="Resume or Stage not found")
     return new_stage
 
-# Создание стадии
-@router.post("/create_stage")
-def create_stage(new_stage: StageCreate, db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
-    user_info = verify_token(token.credentials)
-    if user_info["role"] != "team_lead_hr" and user_info["role"] != "admin":
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to update vacancies")
-    return crud.create_stage(db, name=new_stage.name, description=new_stage.description)
-
-# Получение стадий
-@router.get("/list_stages")
-def read_stages(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
-    return crud.get_stages(db, skip=skip, limit=limit)
